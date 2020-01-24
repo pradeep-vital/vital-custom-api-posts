@@ -1,0 +1,1 @@
+# vital-custom-post-types
