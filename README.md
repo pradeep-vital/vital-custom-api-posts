@@ -1,1 +1,1 @@
-# vital-custom-post-types
+# vital-custom-api-posts
