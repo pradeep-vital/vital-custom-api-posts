@@ -1,24 +1,24 @@
 <?php
 /**
- * Example post type
+ * ${varname} post type
  */
 
 // Define our post type names
-$widget_names = [
-	'name'                  => 'vtl_widget',
+${`${varname}_names`} = [
+	'name'                  => 'vtl_${varname}',
 	'menu_name'             => 'Widgets',
 	'singular'              => 'Widget',
 	'plural'                => 'Widgets',
 	'all_items'             => 'All Widgets',
 	'slug'                  => 'widget',
 	'featured_image'        => 'Widget Diagram',
-	'set_featured_image'    => 'Set widget diagram',
-	'remove_featured_image' => 'Remove widget diagram',
-	'use_featured_image'    => 'Use as widget diagram',
+	'set_featured_image'    => 'Set ${varname} diagram',
+	'remove_featured_image' => 'Remove ${varname} diagram',
+	'use_featured_image'    => 'Use as ${varname} diagram',
 ];
 
 // Define our options
-$widget_options = [
+${`${varname}_options`} = [
 	'exclude_from_search' => false,
 	'hierarchical'        => false,
 	'menu_position'       => 20,
@@ -33,19 +33,19 @@ $widget_options = [
 ];
 
 // Create post type
-$widget = new PostType($widget_names, $widget_options);
+${`${varname}`} = new PostType($widget_names, $widget_options);
 
 // Set the menu icon
-$widget->icon('dashicons-star-filled');
+${`${varname}`}->icon('dashicons-star-filled');
 
 // Set the title placeholder text
-$widget->placeholder('Enter widget name');
+${`${varname}`}->placeholder('Enter ${varname} name');
 
 // Hide admin columns
-$widget->columns()->hide(['wpseo-score', 'wpseo-score-readability']);
+${`${varname}`}->columns()->hide(['wpseo-score', 'wpseo-score-readability']);
 
 // Set all columns
-$widget->columns()->set([
+${`${varname}`}->columns()->set([
 	'cb'          => '<input type="checkbox" />',
 	'feat_img'    => 'Thumb',
 	'title'       => __('Title'),
@@ -53,19 +53,19 @@ $widget->columns()->set([
 ]);
 
 // Add custom admin columns to default array
-$widget->columns()->add([
-	'widget_color' => 'Color',
+${`${varname}`}->columns()->add([
+	'${varname}_color' => 'Color',
 ]);
 
 // Populate custom admin columns
-$widget->columns()->populate('widget_color', function($column, $post_id) {
-	echo get_post_meta($post_id, 'widget_color');
+${`${varname}`}->columns()->populate('${varname}_color', function($column, $post_id) {
+	echo get_post_meta($post_id, '${varname}_color');
 });
 
 // Add CSS to style columns
 add_action('admin_head', function() {
 	$screen = get_current_screen();
-	if ($screen && ($screen->base === 'edit') && ($screen->id === 'edit-vtl_widget')) {
+	if ($screen && ($screen->base === 'edit') && ($screen->id === 'edit-vtl_${varname}')) {
 		echo '<style>
 		th[id=feat_img] {
 			width: 42px;
@@ -75,12 +75,12 @@ add_action('admin_head', function() {
 });
 
 // Make custom admin columns sortable
-$widget->columns()->sortable([
-	'widget_color' => ['widget_color', true]
+${`${varname}`}->columns()->sortable([
+	'${varname}_color' => ['${varname}_color', true]
 ]);
 
 // Define taxonomy names
-$widget_type_names = [
+${`${varname}_type_names`} = [
 	'name'     => 'widget_type',
 	'singular' => 'Widget Type',
 	'plural'   => 'Widget Types',
@@ -88,7 +88,7 @@ $widget_type_names = [
 ];
 
 // Define taxonomy options
-$widget_type_options = [
+${`${varname}_type_options`} = [
 	'heirarchical'      => true,
 	'labels'            => array('menu_name' => 'Types'),
 	'show_admin_column' => true,
@@ -97,4 +97,4 @@ $widget_type_options = [
 ];
 
 // Register taxonomy
-$widget->taxonomy($widget_type_names, $widget_type_options);
+${`${varname}`}->taxonomy(${`${varname}_type_names`}, ${`${varname}_type_options`});
