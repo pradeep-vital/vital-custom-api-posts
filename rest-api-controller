@@ -1,0 +1,141 @@
+<?php
+
+class Vital_Resource_REST_Posts_Controller extends WP_REST_Posts_Controller {
+	public $rest_namespace = 'vtl';
+	public $post_type = 'resource';
+
+	public function register_routes() {
+		register_rest_route($this->rest_namespace, "/{$this->post_type}", [
+			'methods'  => WP_REST_Server::READABLE,
+			'callback' => [$this, 'get_resources'],
+		]);
+
+		register_rest_route($this->rest_namespace, "/{$this->post_type}/view", [
+			'methods'  => WP_REST_Server::READABLE,
+			'callback' => [$this, 'view_resources'],
+		]);
+
+		register_rest_route($this->rest_namespace, "/{$this->post_type}/(?P<id>\d+)", [
+			'methods'  => WP_REST_Server::READABLE,
+			'callback' => [$this, 'get_resource'],
+		]);
+
+		register_rest_route($this->rest_namespace, "/{$this->post_type}/(?P<id>\d+)/view", [
+			'methods'  => WP_REST_Server::READABLE,
+			'callback' => [$this, 'view_resource'],
+		]);
+	}
+
+	private function decorate_raw_post($r) {
+		$extra_fields = [];
+
+		$extra_fields['permalink'] = get_permalink($r);
+
+		if (function_exists('get_fields')) {
+			$extra_fields['acf'] = get_fields($r->ID);
+			$extra_fields['resource_url'] = get_resource_url($r->ID);
+		}
+
+		foreach (get_object_taxonomies($this->post_type) as $tax_slug) {
+			$extra_fields[$tax_slug] = get_the_terms($r->ID, $tax_slug);
+		}
+
+		if (post_type_supports($this->post_type, 'thumbnail')) {
+			$extra_fields['thumbnail'] = get_the_post_thumbnail($r->ID);
+		}
+
+		$ret = array_merge( (array) $r, $extra_fields);
+		return $ret;
+	}
+
+	private function post_query($params) {
+		$output = [];
+		$query_args = [
+			'post_type'   => $this->post_type,
+			'post_status' => 'publish',
+		];
+
+		$posts_query = new WP_Query(array_merge($query_args, $params));
+		$posts_query->posts = array_map([$this, 'decorate_raw_post'], $posts_query->posts);
+
+		return $posts_query;
+	}
+
+	public function get_resources($request) {
+		$query_args = [];
+		$query_keys = ['paged', 'posts_per_page', 's'];
+		foreach ($query_keys as $key) {
+			if ($request->get_param($key)) {
+				$query_args[$key] = $request->get_param($key);
+			}
+		}
+
+		$tax_query = [];
+		foreach (get_object_taxonomies($this->post_type) as $tax_slug) {
+			$terms = $request->get_param($tax_slug);
+			if (!empty($terms)) {
+				$tax_query[] = [
+					'taxonomy' => $tax_slug,
+					'field'    => 'slug',
+					'terms'    => $terms,
+					'operator' => 'IN',
+				];
+			}
+		}
+
+		if (!empty($tax_query)) {
+			$tax_query['relation'] = 'AND';
+			$query_args['tax_query'] = $tax_query;
+		}
+
+		$posts_query = $this->post_query($query_args);
+
+		$response = rest_ensure_response($posts_query->posts);
+
+		$response->header('X-WP-Total', $posts_query->found_posts);
+		$response->header('X-WP-TotalPages', $posts_query->max_num_pages);
+
+		return $response;
+	}
+
+	public function view_resources($request) {
+		$get_response = $this->get_resources($request);
+		$resources = $get_response->data;
+
+		if (!empty($resources)) {
+			$cards = array_map('get_resource_card', wp_list_pluck($resources, 'ID'));
+			$output = sprintf('<div class="resource-card-collection">%s</div>', implode('', $cards));
+		} else {
+			$output = false;
+		}
+
+		$response = rest_ensure_response($output);
+		$response->header('X-WP-Total', $get_response->headers['X-WP-Total']);
+		$response->header('X-WP-TotalPages', $get_response->headers['X-WP-TotalPages']);
+
+		return $response;
+	}
+
+	public function get_resource($data) {
+		$posts_query = $this->post_query(['p' => $data['id']]);
+
+		$response = rest_ensure_response($posts_query->posts);
+
+		$response->header('X-WP-Total', $posts_query->found_posts);
+		$response->header('X-WP-TotalPages', $posts_query->max_num_pages);
+
+		return $response;
+	}
+
+	public function view_resource($data) {
+		$response = $this->get_resource($data);
+
+		if (!empty($response->data)) {
+			$resource = array_shift($response->data);
+
+			return get_resource_card($resource['ID']);
+		} else {
+			return false;
+		}
+	}
+}
